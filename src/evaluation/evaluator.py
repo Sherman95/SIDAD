@@ -25,15 +25,16 @@ class Evaluator:
     Framework de evaluación experimental para comparar el rendimiento
     del Agente SIDAD en diferentes escenarios de datos.
     """
-    def __init__(self, orchestrator: Orchestrator):
-        self.orchestrator = orchestrator
+    def __init__(self, pipeline):
+        # pipeline puede ser Orchestrator o StaticPipeline, ambos implementan run(state)
+        self.pipeline = pipeline
         self.metrics: List[EvaluationMetric] = []
 
     def run_scenario(self, scenario_name: str, initial_state: AgentState, provider: str = "mock") -> EvaluationMetric:
-        print(f"\n[Evaluator] Ejecutando escenario: {scenario_name}")
+        print(f"\n[Evaluator] Ejecutando escenario: {scenario_name} | Provider: {provider}")
         start_time = time.time()
         
-        final_state = self.orchestrator.run(initial_state)
+        final_state = self.pipeline.run(initial_state)
         
         end_time = time.time()
         
@@ -62,6 +63,9 @@ class Evaluator:
 
         # Separación de errores remanentes
         critical_validation_errors = len([v for v in final_state.critic_verdicts if v.status == "FAIL"])
+        if provider == "static" and final_state.validation_report and not final_state.validation_report.is_valid:
+            critical_validation_errors += 1
+            
         operational_errors = len(final_state.pending_issues)
         
         # Determinar fallos de proveedor (ej. Quota limit)

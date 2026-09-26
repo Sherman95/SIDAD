@@ -54,6 +54,12 @@ class Orchestrator:
                 
                 state.status = "SUCCESS"
                 break
+                
+            # 4.5. Control de Errores de API
+            if decision.tool_name == "ERROR":
+                self._record_error(state, "LLM_API_ERROR", decision.operational_reason, "El proveedor LLM falló al tomar una decisión.")
+                # Incrementamos iteración. Eventualmente llegará a max_iterations si sigue fallando
+                continue
 
             # 5. Ejecución Segura
             is_error, result_str = self.registry.execute(decision.tool_name, decision.arguments)

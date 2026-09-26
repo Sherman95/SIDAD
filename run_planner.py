@@ -29,7 +29,7 @@ def run():
     print(f"Tema Visual Sugerido: {dashboard_plan.theme}")
     
     for i, page in enumerate(dashboard_plan.pages, 1):
-        print(f"\n📄 PÁGINA {i}: {page.name}")
+        print(f"\n- PÁGINA {i}: {page.name}")
         print(f"   Objetivo: {page.objective}")
         print(f"   Slicers (Filtros): {', '.join(page.slicers) if page.slicers else 'Ninguno'}")
         

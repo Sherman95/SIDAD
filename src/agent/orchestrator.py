@@ -57,9 +57,15 @@ class Orchestrator:
                 
             # 4.5. Control de Errores de API
             if decision.tool_name == "ERROR":
-                self._record_error(state, "LLM_API_ERROR", decision.operational_reason, "El proveedor LLM falló al tomar una decisión.")
-                # Incrementamos iteración. Eventualmente llegará a max_iterations si sigue fallando
-                continue
+                if "LLM_QUOTA_ERROR" in decision.operational_reason:
+                    self._record_error(state, "LLM_QUOTA_ERROR", decision.operational_reason, "El proveedor LLM superó su cuota de uso.")
+                    state.status = "FAILED"
+                    state.pending_issues.append("LLM_QUOTA_ERROR: La cuota de uso del API se agotó. Terminando ejecución prematuramente.")
+                    break
+                else:
+                    self._record_error(state, "LLM_API_ERROR", decision.operational_reason, "El proveedor LLM falló al tomar una decisión.")
+                    # Incrementamos iteración. Eventualmente llegará a max_iterations si sigue fallando, o anti-loop saltará
+                    continue
 
             # 5. Ejecución Segura
             is_error, result_str = self.registry.execute(decision.tool_name, decision.arguments)

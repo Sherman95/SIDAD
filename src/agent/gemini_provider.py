@@ -45,11 +45,18 @@ class GeminiLLMProvider(LLMProvider):
                 operational_reason=f"Gemini API Error: Respuesta inválida del modelo. {str(ve)}"
             )
         except Exception as e:
+            error_str = str(e)
+            if "429" in error_str or "quota" in error_str.lower() or "exhausted" in error_str.lower():
+                return Decision(
+                    tool_name="ERROR",
+                    arguments={},
+                    operational_reason=f"LLM_QUOTA_ERROR: {error_str}"
+                )
             # Errores HTTP, timeout, API Key inválida, etc.
             return Decision(
                 tool_name="ERROR",
                 arguments={},
-                operational_reason=f"Gemini API Error: {str(e)}"
+                operational_reason=f"LLM_API_ERROR: {error_str}"
             )
 
     def _build_prompt(self, state: AgentState, available_tools: list[dict]) -> str:
@@ -74,9 +81,18 @@ OBLIGATORIO: La ruta del dataset de entrada que debes procesar es EXACTAMENTE: '
 Iteration Count: {state.iteration_count} / {state.max_iterations}
 
 Artefactos disponibles (Metadatos):
-- Profile: {"SÍ" if state.dataset_profile else "NO"}
-- Errores de datos detectados: {state.dataset_profile.problems_detected if state.dataset_profile else 'Ninguno/No evaluado'}
-- Acciones de Limpieza Hechas: {len(state.transformation_logs)}
+- Profile: {"SÍ" if state.dataset_profile else "NO"}"""
+        
+        if state.dataset_profile:
+            prompt += f"\n  -> Filas: {state.dataset_profile.row_count}, Columnas: {state.dataset_profile.column_count}"
+            prompt += f"\n  -> Duplicados: {state.dataset_profile.duplicate_rows}"
+            prompt += f"\n  -> Problemas detectados: {state.dataset_profile.problems_detected}"
+            
+        prompt += f"\n- Acciones de Limpieza Hechas: {len(state.transformation_logs)}"
+        if state.transformation_logs:
+            prompt += f"\n  -> Últimas acciones: {[log.action for log in state.transformation_logs[-3:]]}"
+            
+        prompt += f"""
 - Modelo Semántico: {"SÍ" if state.semantic_project else "NO"}
 - Plan Dashboard: {"SÍ" if state.dashboard_plan else "NO"}
 - Layout Reporte: {"SÍ" if state.report_layout else "NO"}

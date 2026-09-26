@@ -11,10 +11,28 @@ from src.agent.critic import Critic
 from src.agent.orchestrator import Orchestrator
 from src.agent.llm_provider import Decision
 
-def print_observability_report(state: AgentState, provider_name: str):
-    print("\n=== REPORTE DE OBSERVABILIDAD DE EJECUCIÓN ===")
+def print_observability_report(state: AgentState, provider_name: str, model_name: str):
+    print("\n=== SIDAD EXECUTION REPORT ===")
     print(f"Provider: {provider_name}")
-    print(f"Status: {state.status}")
+    print(f"Model: {model_name}")
+    
+    # Determinar si hay error de cuota en history
+    quota_errors = [a for a in state.execution_history if a.tool_name == "LLM_QUOTA_ERROR"]
+    failure_type = "NONE"
+    if state.status == "FAILED":
+        if quota_errors:
+            failure_type = "LLM_QUOTA_ERROR"
+        elif "límite máximo" in str(state.pending_issues):
+            failure_type = "MAX_ITERATIONS"
+        elif "Bucle atascado" in str(state.pending_issues):
+            failure_type = "ANTI_LOOP"
+        else:
+            failure_type = "AGENT_ERROR"
+            
+    print(f"\nStatus: {state.status}")
+    if failure_type != "NONE":
+        print(f"Failure type: {failure_type}")
+        
     print(f"Iterations: {state.iteration_count} / {state.max_iterations}")
     print(f"Tools executed: {len(state.execution_history)}")
     
@@ -29,8 +47,13 @@ def print_observability_report(state: AgentState, provider_name: str):
         if a.is_error:
             print(f"    Detalle: {a.result_summary}")
         
-    print(f"\nCorrections needed: {corrections}")
-    print(f"Critical errors pending: {critical_errors}")
+    print(f"\nCorrections: {corrections}")
+    print(f"Critical errors: {critical_errors}")
+    
+    if failure_type != "NONE":
+        print("\nProvider errors:")
+        for err in quota_errors:
+            print(f"- {err.operational_reason}")
 
 def run_tests(provider_name: str):
     print(f"=== INICIANDO TESTS DE FASE 8/9 (ORQUESTADOR + {provider_name}) ===\n")
@@ -84,6 +107,35 @@ def run_tests(provider_name: str):
     assert final_inf.status == "FAILED" and "límite máximo" in final_inf.pending_issues[0], "Max iterations no abortó."
     print("OK: Límite de iteraciones funciona.")
     
+    print("\n--- TEST: Self-Correction (Mock) ---")
+    # Forzamos que el mock falle inicialemente (simulate_fail=True)
+    # y que el validador AABB lo detecte como solapamiento.
+    # En nuestro entorno real, ventas_test.csv no genera suficientes visuales para colisionar en 5 columnas.
+    # Así que vamos a saltar directamente a probar que el LLM genera la decisión correctiva.
+    # Wait, the MockLLMProvider ya lo hace en mock!
+    # El problema es que en la ejecución con ventas_test.csv, el LayoutValidator no detectaba colisión.
+    # Podemos inyectar un estado con validation report falso para simular el fallo.
+    state_sc = AgentState(
+        user_request="test", input_dataset_path="test", current_goal="test"
+    )
+    from src.models.profiling import DiagnosticResult, DatasetProfile
+    from src.models.transformations import TransformationLog
+    from src.models.semantic_model import SemanticProject
+    from src.models.dashboard import DashboardPlan
+    from src.models.report_layout import ReportLayout
+    from src.agent.state import CriticVerdict
+    
+    state_sc.dataset_profile = DiagnosticResult(profile=DatasetProfile(row_count=1, column_count=1, missing_values=0, duplicate_rows=0, columns_with_nulls=[], problems_detected=[]))
+    state_sc.transformation_logs = [TransformationLog(action="test", reason="test", tool_used="test", records_affected=1)]
+    state_sc.semantic_project = SemanticProject(dimensions=[], facts=[], kpis=[], context="test")
+    state_sc.dashboard_plan = DashboardPlan(title="test", pages=[])
+    state_sc.report_layout = ReportLayout(pages=[])
+    state_sc.critic_verdicts = [CriticVerdict(status="FAIL", issue="layout collision", severity="ERROR", recommended_action="regenerate_layout", reason="test")]
+    
+    decision_sc = llm_inf.predict_next_action(state_sc, registry.get_available_tools_info())
+    assert decision_sc.tool_name == "generate_layout" and decision_sc.arguments.get("columns") == 2, "Mock no reaccionó al FAIL del Critic"
+    print("OK: Self-correction LLM decision probada exitosamente.")
+
     print("\n--- EJECUCIÓN PRINCIPAL ---")
     orchestrator = Orchestrator(llm=llm, registry=registry, critic=critic)
     
@@ -94,7 +146,8 @@ def run_tests(provider_name: str):
     )
     
     final_state = orchestrator.run(state)
-    print_observability_report(final_state, provider_name)
+    model_nm = getattr(llm, "model_name", "mock-deterministic")
+    print_observability_report(final_state, provider_name, model_nm)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ejecutar el Agente SIDAD")

@@ -1,0 +1,22 @@
+[
+    {
+        "scenario_name": "Escenario 1: Dataset est\u00e1ndar",
+        "status": "SUCCESS",
+        "iterations": 6,
+        "tools_used": 6,
+        "corrections_made": 0,
+        "critical_errors": 0,
+        "execution_time_seconds": 0.34,
+        "provider_error": "NONE"
+    },
+    {
+        "scenario_name": "Escenario 2: Prueba de estr\u00e9s / Max Iterations",
+        "status": "FAILED",
+        "iterations": 3,
+        "tools_used": 3,
+        "corrections_made": 0,
+        "critical_errors": 1,
+        "execution_time_seconds": 0.0,
+        "provider_error": "MAX_ITERATIONS"
+    }
+]

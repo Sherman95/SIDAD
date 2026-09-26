@@ -1,0 +1,9 @@
+id_venta,fecha,producto,categoria,cantidad,precio,ciudad
+1,2023-01-01,Laptop,Electrónica,1,1200.50,Madrid
+2,2023-01-02,Ratón,Electrónica,2,25.00,Barcelona
+3,2023-01-02,Silla,Oficina,1,150.00,Valencia
+4,,Escritorio,Oficina,,200.00,Madrid
+5,2023-01-03,Laptop,Electrónica,1,1200.50,Madrid
+2,2023-01-02,Ratón,Electrónica,2,25.00,Barcelona
+7,2023-01-04,Teclado,,1,45.00,Sevilla
+8,2023-01-05,Monitor,Electrónica,1,300.00,Valencia

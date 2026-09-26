@@ -1,36 +1,43 @@
-# FASE 10: EVALUACIÓN EXPERIMENTAL
+# FASE 10: INFRAESTRUCTURA DE EVALUACIÓN EXPERIMENTAL
 
 ## 1. Objetivo
-Establecer un framework de pruebas sistemático y medible para la validación académica del Agente SIDAD en el contexto de una Tesis. El objetivo es comparar cuantitativa y cualitativamente la aproximación estática (pipelines rígidos) vs el agente adaptativo.
+Establecer una infraestructura de pruebas sistemática y medible para la validación académica del Agente SIDAD en el contexto de una Tesis. El objetivo es proporcionar un entorno controlado que permita demostrar empíricamente el comportamiento adaptativo del agente mediante escenarios de fallo y recuperación (self-correction).
 
 ## 2. Implementación de la Batería Experimental
 
-Se construyó el módulo `src/evaluation/evaluator.py`, el cual provee la clase `Evaluator`. Esta clase automatiza la ejecución del orquestador a través de múltiples escenarios y recolecta métricas en tiempo de ejecución.
+Se construyó el módulo `src/evaluation/evaluator.py`, el cual provee la clase `Evaluator`. Esta clase automatiza la ejecución del orquestador a través de 8 escenarios deterministas configurados.
 
-### Métricas de Observabilidad Académica:
-- **`status`**: Indica si el pipeline logró converger (`SUCCESS`) o falló (`FAILED`).
-- **`iterations`**: Cuántas iteraciones cognitivas tomó el agente para resolver el problema.
-- **`tools_used`**: Número de herramientas efectivamente ejecutadas con éxito.
-- **`corrections_made`**: Número de veces que el `Critic` abortó el proceso por un Layout inválido, forzando un *Self-Correction*. Demuestra la adaptabilidad del sistema.
-- **`critical_errors`**: Errores no resueltos al finalizar.
+### Escenarios Implementados:
+1. `standard_success`: Ejecución nominal sin errores.
+2. `tool_error`: Intento de uso de una herramienta inexistente.
+3. `invalid_arguments`: Intento de pase de parámetros erróneos a una herramienta.
+4. `max_iterations`: Interrupción forzada por el límite de iteraciones.
+5. `anti_loop`: Activación del guardrail anti-bucle por decisiones idénticas.
+6. `validation_failure`: Simulación de un fallo matemático de validación (overlapping).
+7. `self_correction_success`: Ejecución completa demostrando el bucle Validator(FAIL) -> Critic -> LLM -> Generación -> Validator(PASS).
+8. `finish_success`: Terminación explícita del pipeline.
+
+### Métricas Académicas:
+- **`status`**: Indica si el pipeline logró converger (`SUCCESS`) o fue abortado (`FAILED`).
+- **`iterations`**: Iteraciones cognitivas totales.
+- **`validation_failures`**: Cantidad de ocasiones en que el validador produjo un resultado de error.
+- **`corrections_attempted`**: Intentos de corrección generados por el LLM tras un fallo.
+- **`corrections_successful`**: Correcciones que pasaron exitosamente la re-validación.
+- **`critical_validation_errors`**: Errores matemáticos de maquetación no resueltos al finalizar.
+- **`operational_errors`**: Errores técnicos del entorno (ej. Timeouts, Cuotas, Límites de iteración).
 - **`execution_time_seconds`**: El costo temporal (latencia).
-- **`provider_error`**: Tipificación de fallos externos como límites de cuota (`LLM_QUOTA_ERROR`) o trabas cognitivas (`ANTI_LOOP`).
 
 ## 3. Uso del Framework
 
-Se provee el script en la raíz `run_evaluation.py`, el cual levanta una batería de escenarios (`AgentState` preconfigurados) y los despacha al evaluador.
+Se provee el script en la raíz `run_evaluation.py`.
 
-**Ejecución Simulada:**
+**Ejecución Simulada (Determinista para Trazabilidad):**
 ```bash
 python run_evaluation.py --provider mock
 ```
-**Ejecución Real:**
-```bash
-python run_evaluation.py --provider gemini
-```
 
-El script genera un archivo `docs/evaluation_report.json` que consolida todos los datos, listos para ser injertados en Pandas, Jupyter o Power BI para la redacción de la tesis final.
+El script exporta `docs/evaluation_report.json` que consolida todos los datos.
 
-## 4. Estado de Implementación
-- **Estado**: COMPLETADO.
-- **Validación**: Batería funcional ejecutada bajo Mock. En una etapa productiva, se inyectarán datasets variados (con distintos grados de ruido y volúmenes de datos) para enriquecer la comparativa de la tesis.
+## 4. Limitaciones Restantes
+- **Sin Comparador Estático**: Actualmente, la infraestructura no incluye una función de ejecución estática (pipeline rígido) para comparar su rendimiento contra el agente.
+- **Simulación Aislada**: El caso de validación visual requiere *monkey-patching* en tiempo de evaluación debido a la desconexión actual de los algoritmos de maquetación profunda con los parámetros dinámicos.

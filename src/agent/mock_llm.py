@@ -7,12 +7,20 @@ class MockLLMProvider(LLMProvider):
     Observa el estado real (Pydantic models) y decide la siguiente herramienta lógicamente.
     Permite probar el ciclo de decisión, validación y corrección sin consumir una API.
     """
-    def __init__(self, simulate_fail=False):
+    def __init__(self, simulate_fail=False, scenario="standard"):
         # Si simulate_fail es True, el layout se genera intencionalmente corrupto para disparar el critic
         self.simulate_fail = simulate_fail
+        self.scenario = scenario
         self.has_failed_once = False
 
     def predict_next_action(self, state: AgentState, available_tools: list[dict]) -> Decision:
+        if self.scenario == "tool_error":
+            return Decision(tool_name="tool_inexistente", arguments={}, operational_reason="Simulando herramienta falsa")
+        if self.scenario == "invalid_arguments":
+            return Decision(tool_name="clean_dataset", arguments={"bad_arg": 1}, operational_reason="Simulando argumentos falsos")
+        if self.scenario == "anti_loop":
+            return Decision(tool_name="profile_dataset", arguments={"file_path": "data/raw/ventas_test.csv"}, operational_reason="Bucle infinito")
+
         # Lógica de decisión dinámica basada en los artefactos presentes en AgentState
         
         # 1. ¿Tenemos el perfilado?
@@ -56,10 +64,14 @@ class MockLLMProvider(LLMProvider):
         if not state.report_layout:
             columns = 2
             # Simulamos un fallo (Layout corrupto) la primera vez
-            if self.simulate_fail and not self.has_failed_once:
-                columns = 5 # Esto causará over-saturation o solapamientos
+            if (self.simulate_fail or self.scenario == "validation_failure" or self.scenario == "self_correction_success") and not self.has_failed_once:
+                columns = 100 # Esto causará over-saturation o solapamientos garantizados
                 self.has_failed_once = True
-                reason = "Generando maquetación inicial con 5 columnas (Probablemente falle la UX)."
+                reason = "Generando maquetación inicial con 100 columnas (Probablemente falle la UX)."
+                if self.scenario == "validation_failure":
+                    # For self_correction_success we want it to recover. For validation_failure we might want it to stop?
+                    # The prompt didn't specify exactly, but simulate_fail causes it to fail once.
+                    pass
             else:
                 reason = "Generando maquetación física basada en las páginas planificadas."
                 

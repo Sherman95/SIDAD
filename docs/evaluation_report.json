@@ -1,22 +1,132 @@
 [
     {
-        "scenario_name": "Escenario 1: Dataset est\u00e1ndar",
+        "scenario_name": "1. standard_success",
+        "provider": "mock",
         "status": "SUCCESS",
         "iterations": 6,
         "tools_used": 6,
-        "corrections_made": 0,
-        "critical_errors": 0,
-        "execution_time_seconds": 0.34,
+        "validation_failures": 0,
+        "corrections_attempted": 0,
+        "corrections_successful": 0,
+        "critical_validation_errors": 0,
+        "operational_errors": 0,
+        "final_pending_issues": [],
+        "execution_time_seconds": 0.51,
         "provider_error": "NONE"
     },
     {
-        "scenario_name": "Escenario 2: Prueba de estr\u00e9s / Max Iterations",
+        "scenario_name": "2. tool_error",
+        "provider": "mock",
         "status": "FAILED",
-        "iterations": 3,
-        "tools_used": 3,
-        "corrections_made": 0,
-        "critical_errors": 1,
+        "iterations": 2,
+        "tools_used": 2,
+        "validation_failures": 0,
+        "corrections_attempted": 0,
+        "corrections_successful": 0,
+        "critical_validation_errors": 0,
+        "operational_errors": 1,
+        "final_pending_issues": [
+            "Se super\u00f3 el l\u00edmite m\u00e1ximo de iteraciones (2)."
+        ],
         "execution_time_seconds": 0.0,
         "provider_error": "MAX_ITERATIONS"
+    },
+    {
+        "scenario_name": "3. invalid_arguments",
+        "provider": "mock",
+        "status": "FAILED",
+        "iterations": 2,
+        "tools_used": 2,
+        "validation_failures": 0,
+        "corrections_attempted": 0,
+        "corrections_successful": 0,
+        "critical_validation_errors": 0,
+        "operational_errors": 1,
+        "final_pending_issues": [
+            "Se super\u00f3 el l\u00edmite m\u00e1ximo de iteraciones (2)."
+        ],
+        "execution_time_seconds": 0.0,
+        "provider_error": "MAX_ITERATIONS"
+    },
+    {
+        "scenario_name": "4. max_iterations",
+        "provider": "mock",
+        "status": "FAILED",
+        "iterations": 2,
+        "tools_used": 2,
+        "validation_failures": 0,
+        "corrections_attempted": 0,
+        "corrections_successful": 0,
+        "critical_validation_errors": 0,
+        "operational_errors": 1,
+        "final_pending_issues": [
+            "Se super\u00f3 el l\u00edmite m\u00e1ximo de iteraciones (2)."
+        ],
+        "execution_time_seconds": 0.01,
+        "provider_error": "MAX_ITERATIONS"
+    },
+    {
+        "scenario_name": "5. anti_loop",
+        "provider": "mock",
+        "status": "FAILED",
+        "iterations": 10,
+        "tools_used": 10,
+        "validation_failures": 0,
+        "corrections_attempted": 0,
+        "corrections_successful": 0,
+        "critical_validation_errors": 0,
+        "operational_errors": 1,
+        "final_pending_issues": [
+            "Se super\u00f3 el l\u00edmite m\u00e1ximo de iteraciones (10)."
+        ],
+        "execution_time_seconds": 0.02,
+        "provider_error": "MAX_ITERATIONS"
+    },
+    {
+        "scenario_name": "6. validation_failure",
+        "provider": "mock",
+        "status": "FAILED",
+        "iterations": 6,
+        "tools_used": 6,
+        "validation_failures": 1,
+        "corrections_attempted": 0,
+        "corrections_successful": 0,
+        "critical_validation_errors": 18,
+        "operational_errors": 1,
+        "final_pending_issues": [
+            "Se super\u00f3 el l\u00edmite m\u00e1ximo de iteraciones (6)."
+        ],
+        "execution_time_seconds": 0.01,
+        "provider_error": "MAX_ITERATIONS"
+    },
+    {
+        "scenario_name": "7. self_correction_success",
+        "provider": "mock",
+        "status": "SUCCESS",
+        "iterations": 8,
+        "tools_used": 8,
+        "validation_failures": 1,
+        "corrections_attempted": 1,
+        "corrections_successful": 1,
+        "critical_validation_errors": 0,
+        "operational_errors": 0,
+        "final_pending_issues": [],
+        "execution_time_seconds": 0.01,
+        "provider_error": "NONE"
+    },
+    {
+        "scenario_name": "8. finish_success",
+        "provider": "mock",
+        "status": "SUCCESS",
+        "iterations": 6,
+        "tools_used": 6,
+        "validation_failures": 0,
+        "corrections_attempted": 0,
+        "corrections_successful": 0,
+        "critical_validation_errors": 0,
+        "operational_errors": 0,
+        "final_pending_issues": [],
+        "execution_time_seconds": 0.01,
+        "provider_error": "NONE"
     }
 ]

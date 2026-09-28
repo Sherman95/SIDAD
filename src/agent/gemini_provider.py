@@ -84,8 +84,8 @@ Artefactos disponibles (Metadatos):
 - Profile: {"SÍ" if state.dataset_profile else "NO"}"""
         
         if state.dataset_profile:
-            prompt += f"\n  -> Filas: {state.dataset_profile.row_count}, Columnas: {state.dataset_profile.column_count}"
-            prompt += f"\n  -> Duplicados: {state.dataset_profile.duplicate_rows}"
+            prompt += f"\n  -> Filas: {state.dataset_profile.profile.row_count}, Columnas: {state.dataset_profile.profile.column_count}"
+            prompt += f"\n  -> Duplicados: {state.dataset_profile.profile.duplicate_rows}"
             prompt += f"\n  -> Problemas detectados: {state.dataset_profile.problems_detected}"
             
         prompt += f"\n- Acciones de Limpieza Hechas: {len(state.transformation_logs)}"

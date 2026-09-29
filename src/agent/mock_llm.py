@@ -48,7 +48,10 @@ class MockLLMProvider(LLMProvider):
         if not state.semantic_project:
             return Decision(
                 tool_name="build_semantic_model",
-                arguments={"diagnostic_json": state.dataset_profile.model_dump_json()},
+                arguments={
+                    "diagnostic_json": state.dataset_profile.model_dump_json(),
+                    "source_path": state.processed_dataset_path,
+                },
                 operational_reason="Se construyó el modelo semántico para abstraer Dimensiones, Métricas y sugerir KPIs."
             )
             

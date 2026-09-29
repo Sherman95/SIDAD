@@ -19,7 +19,10 @@ def run():
     # 2. Construimos el modelo semántico
     print(f"2. Construyendo propuesta semántica...")
     builder = SemanticBuilder(diagnostic.profile)
-    semantic_project = builder.build_project(table_name="FACT_VENTAS")
+    semantic_project = builder.build_project(
+        table_name="FACT_VENTAS",
+        source_path=file_path,
+    )
     
     print("\n=== MODELO DE TABLAS DETECTADO ===")
     for table in semantic_project.tables:

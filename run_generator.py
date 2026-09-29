@@ -18,7 +18,7 @@ def run():
     diagnostic = profiler.profile()
     
     semantic_builder = SemanticBuilder(diagnostic.profile)
-    semantic_project = semantic_builder.build_project()
+    semantic_project = semantic_builder.build_project(source_path=file_path)
     
     planner = DashboardPlanner(semantic_project)
     dashboard_plan = planner.generate_plan()

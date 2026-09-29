@@ -70,12 +70,12 @@ def wrap_clean_dataset(input_path: str, output_path: str, actions: list) -> str:
     df.write_csv(output_path)
     return json.dumps([l.model_dump() for l in logs])
 
-def wrap_build_semantic(diagnostic_json: str) -> str:
+def wrap_build_semantic(diagnostic_json: str, source_path: str) -> str:
     from src.tools.modeling.semantic_builder import SemanticBuilder
     from src.models.profiling import DiagnosticResult
     diag = DiagnosticResult.model_validate_json(diagnostic_json)
     builder = SemanticBuilder(diag.profile)
-    return builder.build_project().model_dump_json()
+    return builder.build_project(source_path=source_path).model_dump_json()
 
 def wrap_create_planner(semantic_project_json: str) -> str:
     from src.tools.dashboard.planner import DashboardPlanner
@@ -102,7 +102,12 @@ def get_default_registry() -> ToolRegistry:
     reg = ToolRegistry()
     reg.register("profile_dataset", "Analiza la estructura y calidad de un dataset sin modificarlo.", {"file_path": "str"}, wrap_profile_dataset)
     reg.register("clean_dataset", "Limpia datos basándose en el perfilado.", {"input_path": "str", "output_path": "str", "actions": "list"}, wrap_clean_dataset)
-    reg.register("build_semantic_model", "Deduce roles de negocio (Hechos, Dimensiones).", {"diagnostic_json": "str"}, wrap_build_semantic)
+    reg.register(
+        "build_semantic_model",
+        "Deduce roles de negocio y conserva la ruta real del dataset modelado.",
+        {"diagnostic_json": "str", "source_path": "str"},
+        wrap_build_semantic,
+    )
     reg.register("create_dashboard_plan", "Planifica el reporte analítico.", {"semantic_project_json": "str"}, wrap_create_planner)
     reg.register("generate_layout", "Asigna coordenadas matemáticas.", {"dashboard_plan_json": "str", "columns": "int"}, wrap_generate_layout)
     reg.register("validate_layout", "Verifica colisiones visuales AABB.", {"layout_json": "str"}, wrap_validate_layout)

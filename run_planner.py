@@ -17,7 +17,7 @@ def run():
     diagnostic = profiler.profile()
     
     semantic_builder = SemanticBuilder(diagnostic.profile)
-    semantic_project = semantic_builder.build_project()
+    semantic_project = semantic_builder.build_project(source_path=file_path)
     
     # 1. Ejecutar Planner
     print("1. Diseñando estructura analítica del Dashboard basado en el Modelo Semántico...")

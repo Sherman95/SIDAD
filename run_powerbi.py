@@ -1,5 +1,6 @@
 import sys
 import os
+from pathlib import Path
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -11,32 +12,33 @@ from src.tools.bi.powerbi_provider import PowerBIProvider
 def run():
     print("=== Iniciando FASE 5: Integración con Power BI ===\n")
     
-    file_path = os.path.join("data", "processed", "ventas_limpio.csv")
-    output_dir = os.path.join("data", "output", "powerbi_export")
+    project_root = Path(__file__).resolve().parent
+    file_path = project_root / "data" / "processed" / "ventas_limpio.csv"
+    output_dir = project_root / "data" / "output" / "powerbi_export"
     
     # Pre-requisitos
     profiler = DataProfiler(file_path)
     diagnostic = profiler.profile()
     
     semantic_builder = SemanticBuilder(diagnostic.profile)
-    semantic_project = semantic_builder.build_project()
+    semantic_project = semantic_builder.build_project(source_path=file_path)
     
     planner = DashboardPlanner(semantic_project)
     dashboard_plan = planner.generate_plan()
     
     # Integración PBI
     print("1. Instanciando Proveedor de BI: Power BI...")
-    pbi = PowerBIProvider()
+    pbi = PowerBIProvider(source_base_path=project_root)
     
-    print("2. Desplegando Modelo Semántico (Generando script TMDL)...")
+    print("2. Desplegando Modelo Semántico (Generando script TMDL y esqueleto PBIP)...")
     pbi.deploy_semantic_model(semantic_project, output_dir)
-    print(f"   -> Creado: {os.path.join(output_dir, 'model.tmdl')}")
+    print(f"   -> Creado: Estructura PBIP en {output_dir}")
     
-    print("3. Desplegando Estructura de Reporte (PBIP JSON fallback)...")
+    print("3. Desplegando metadatos raíz del reporte PBIR...")
     pbi.deploy_dashboard(dashboard_plan, output_dir)
-    print(f"   -> Creado: {os.path.join(output_dir, 'report_spec.json')}")
+    print(f"   -> Creado: Estructura Report en {output_dir}")
     
-    print("\n¡Exportación finalizada! Estos archivos pueden ser inyectados en un Power BI Project (.pbip) o Tabular Editor.")
+    print("\nExportación estructural finalizada. Falta validarla experimentalmente en Power BI Desktop.")
 
 if __name__ == "__main__":
     run()

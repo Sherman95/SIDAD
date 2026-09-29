@@ -78,6 +78,7 @@ Además de las listadas, existe una herramienta virtual de control:
 User Request: {state.user_request}
 Current Goal: {state.current_goal}
 OBLIGATORIO: La ruta del dataset de entrada que debes procesar es EXACTAMENTE: '{state.input_dataset_path.replace(chr(92), "/")}'
+Ruta del dataset procesado disponible: '{state.processed_dataset_path.replace(chr(92), "/") if state.processed_dataset_path else "NO DISPONIBLE"}'
 Iteration Count: {state.iteration_count} / {state.max_iterations}
 
 Artefactos disponibles (Metadatos):

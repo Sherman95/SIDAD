@@ -15,7 +15,9 @@ def run():
     file_path = os.path.join("data", "processed", "ventas_limpio.csv")
     
     profiler = DataProfiler(file_path)
-    semantic_project = SemanticBuilder(profiler.profile().profile).build_project()
+    semantic_project = SemanticBuilder(profiler.profile().profile).build_project(
+        source_path=file_path
+    )
     dashboard_plan = DashboardPlanner(semantic_project).generate_plan()
     report_layout = ReportGenerator(dashboard_plan).generate_layout()
     

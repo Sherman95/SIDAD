@@ -1,15 +1,38 @@
-# Fase 5: Integración con Power BI
+# Fase 5: Abstraccion de BI
 
-## 1. Introducción
-La integración con el motor final de Business Intelligence es el puente entre el razonamiento lógico del Agente SIDAD y el artefacto visual final. En lugar de interactuar con la interfaz gráfica de Power BI, el sistema se comunica de manera programática a través de estándares textuales estructurados.
+## Estado
 
-## 2. Decisiones Arquitectónicas
-- **Patrón Adapter (`BIProvider`):** Se definió una interfaz abstracta `BIProvider` que obliga a desacoplar al Agente de Power BI. Esto permite escalar en el futuro a `TableauProvider` sin reescribir la lógica de orquestación, limpieza o modelado (Cumplimiento de la Sección 15 del Contexto Maestro).
-- **Tabular Model Definition Language (TMDL):** Para la creación del modelo semántico (Tablas, Columnas, Medidas DAX), se ha elegido TMDL, el nuevo estándar oficial de Microsoft para la definición de modelos analíticos en texto plano. Esto garantiza que las salidas del Agente sean versionables en Git, humanamente legibles y directamente inyectables en un Power BI Project (.pbip) o vía Tabular Editor.
-- **Persistencia JSON para Reportes:** El diseño de páginas y gráficos propuesto por el `DashboardPlanner` se exporta a JSON. En una implementación productiva integral, este esquema alimentará la API de Power BI (o se transcribirá directamente a `report.json` de la estructura PBIP).
+Esta fase introdujo el patron Adapter mediante `BIProvider` y su implementacion
+`PowerBIProvider`. La abstraccion sigue vigente: el modelo semantico, el plan y el
+layout son modelos de dominio de SIDAD; Power BI es un destino de exportacion.
 
-## 3. Lógica Implementada
-1. Toma el `SemanticProject` (Fase 3) y el `DashboardPlan` (Fase 4).
-2. `PowerBIProvider.deploy_semantic_model`: Convierte las tablas, llaves, y fórmulas agregadas (`kpis`) en un archivo `model.tmdl`.
-3. `PowerBIProvider.deploy_dashboard`: Serializa el diseño de los gráficos en un archivo JSON para su consumo externo.
-4. Estas salidas deterministas eliminan la necesidad de "hacer clics" manuales en Power BI Desktop para modelar los datos básicos.
+La implementacion original generaba un `model.tmdl` monolitico y un
+`report_spec.json`. Esos artefactos demostraban la traduccion inicial, pero no
+constituian un proyecto Power BI validado.
+
+## Evolucion
+
+La generacion estructural del modelo Power BI se completa incrementalmente en
+[Fase 12.1A](FASE_12_1A_TMDL.md). Las fases posteriores conservan esta cadena:
+
+`DashboardPlan -> ReportLayout -> PBIR -> Power BI`
+
+El antiguo `report_spec.json` era un artefacto intermedio, no PBIR. El provider ya
+no lo genera ni lo usa como sustituto de paginas y visuales oficiales.
+
+## Limite de evidencia
+
+- **Implementado:** adaptador determinista, estructura PBIP y modelo TMDL.
+- **Validado automaticamente:** modelos Pydantic, estructura y contenido generado
+  mediante pruebas unitarias.
+- **Verificado manualmente en Power BI Desktop:** apertura de `SIDAD.pbip`,
+  reconocimiento del modelo semantico y de `FACT_DATA`, tipos, medidas DAX,
+  lectura de la particion M desde el CSV procesado real y actualizacion sin
+  errores.
+- **No implementado todavia:** estructura PBIR completa, paginas, visuales,
+  bindings, traduccion `ReportLayout -> PBIR` e integracion del exportador en el
+  agente.
+
+La evidencia de Desktop cierra la carga y actualizacion del modelo semantico de
+12.1A. No demuestra un dashboard terminado, una implementacion completa de Power
+BI ni un pipeline Power BI end-to-end validado.

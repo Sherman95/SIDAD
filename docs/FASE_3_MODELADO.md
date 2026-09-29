@@ -11,3 +11,10 @@ Una vez que el dataset ha sido perfilado y limpiado de manera estructurada, el s
 1. Clasificación estricta de variables en roles de negocio (Dimensión, Métrica, Fecha, Llave).
 2. Agrupación en Entidades de negocio (Tablas de Hechos o Dimensiones).
 3. Inferencia de fórmulas agregadas básicas (Ej. Conteo de transacciones, Sumas, Promedios) estructurando automáticamente propuestas de código DAX.
+
+## 4. Evolución en Fase 12.1A
+
+El dominio incorpora ahora `SemanticDataType`, procedencia por
+`SemanticTable.source_path`, `KPI.base_table` y relaciones explícitas validadas.
+El builder de una tabla plana no infiere relaciones inexistentes. La decisión y
+los límites se documentan en [FASE_12_1A_TMDL.md](FASE_12_1A_TMDL.md).

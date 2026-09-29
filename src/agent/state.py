@@ -27,6 +27,7 @@ class AgentState(BaseModel):
     user_request: str
     input_dataset_path: str
     current_goal: str
+    processed_dataset_path: Optional[str] = None
     
     # Artefactos
     dataset_profile: Optional[DiagnosticResult] = None

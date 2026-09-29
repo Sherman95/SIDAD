@@ -77,6 +77,7 @@ class StaticPipeline:
             state.status = "FAILED"
             state.pending_issues.append("Error operativo en clean_dataset")
             return state
+        state.processed_dataset_path = args["output_path"]
         try:
             logs_json = json.loads(res)
             state.transformation_logs = [TransformationLog(**l) for l in logs_json]
@@ -85,7 +86,10 @@ class StaticPipeline:
 
         # 3. Semantic Model
         tool = "build_semantic_model"
-        args = {"diagnostic_json": state.dataset_profile.model_dump_json()}
+        args = {
+            "diagnostic_json": state.dataset_profile.model_dump_json(),
+            "source_path": state.processed_dataset_path,
+        }
         is_err, res = self.registry.execute(tool, args)
         self._record(state, tool, args, is_err, res, "Ejecución estática: Modelado")
         if is_err:

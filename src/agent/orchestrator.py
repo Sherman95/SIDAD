@@ -84,6 +84,8 @@ class Orchestrator:
 
             # 7. Si fue exitoso, parsear el output hacia el Estado Tipado
             if not is_error:
+                if decision.tool_name == "clean_dataset":
+                    state.processed_dataset_path = decision.arguments.get("output_path")
                 self._update_state_from_tool(state, decision.tool_name, result_str)
 
             # 8. Fase de Crítica (Self-Correction loop)

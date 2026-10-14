@@ -8,6 +8,7 @@ from src.models.dashboard import DashboardPlan
 from src.models.report_layout import ReportLayout
 from src.agent.validator import ValidationReport
 from src.models.transformations import TransformationLog
+from src.models.powerbi_export import PowerBIExportResult
 
 class StaticPipeline:
     """
@@ -37,7 +38,7 @@ class StaticPipeline:
         
         # 1. Profile
         tool = "profile_dataset"
-        args = {"file_path": state.input_dataset_path}
+        args = {"file_path": state.resolve_project_path(state.input_dataset_path)}
         
         if self.scenario == "tool_error":
             # Forzamos error operativo simulado
@@ -69,7 +70,11 @@ class StaticPipeline:
         ]
         # Inyectar problema de dataset en Escenario 2 
         # (Aunque el dataset ya puede tener problemas, Static Pipeline igual ejecuta esto rígidamente)
-        args = {"input_path": state.input_dataset_path, "output_path": "data/processed/ventas_limpio_static.csv", "actions": actions}
+        args = {
+            "input_path": state.resolve_project_path(state.input_dataset_path),
+            "output_path": state.resolve_project_path("data/processed/ventas_limpio_static.csv"),
+            "actions": actions,
+        }
         
         is_err, res = self.registry.execute(tool, args)
         self._record(state, tool, args, is_err, res, "Ejecución estática: Limpieza")
@@ -140,5 +145,33 @@ class StaticPipeline:
             state.pending_issues.append("Fallo de validación detectado por pipeline rígido (sin capacidad de corrección)")
             return state
             
+        # 7. Export Power BI
+        tool = "export_to_powerbi"
+        args = {
+            "semantic_project_json": state.semantic_project.model_dump_json(),
+            "dashboard_plan_json": state.dashboard_plan.model_dump_json(),
+            "report_layout_json": state.report_layout.model_dump_json(),
+            "output_path": state.resolve_project_path(state.powerbi_output_path),
+            "project_name": state.powerbi_project_name,
+            "source_base_path": state.resolve_project_path("."),
+        }
+        is_err, res = self.registry.execute(tool, args)
+        self._record(state, tool, args, is_err, res, "Ejecucion estatica: Exportacion Power BI")
+        try:
+            state.powerbi_export = PowerBIExportResult.model_validate_json(res)
+        except Exception as exc:
+            state.status = "FAILED"
+            state.pending_issues.append(
+                f"Error parseando resultado de export_to_powerbi: {exc}"
+            )
+            return state
+        if is_err or not state.powerbi_export.success:
+            state.status = "FAILED"
+            state.pending_issues.extend(
+                f"export_to_powerbi: {error}"
+                for error in state.powerbi_export.errors
+            )
+            return state
+
         state.status = "SUCCESS"
         return state

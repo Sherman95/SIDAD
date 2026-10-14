@@ -124,8 +124,7 @@ class PowerBIProvider(BIProvider):
             raise ValueError("source_base_path debe apuntar a un directorio")
 
     def deploy_semantic_model(self, semantic: SemanticProject, output_path: str) -> bool:
-        if not semantic.tables:
-            raise ValueError("El proyecto semantico debe contener al menos una tabla")
+        self.validate_semantic_project(semantic)
 
         output_dir = Path(output_path)
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -135,13 +134,9 @@ class PowerBIProvider(BIProvider):
         tables_dir = definition_dir / "tables"
         tables_dir.mkdir(parents=True, exist_ok=True)
 
-        table_filenames: dict[str, str] = {}
-        for table in semantic.tables:
-            table_filenames[table.name] = self._table_filename(table.name)
-            self._resolve_csv_source(table)
-            for column in table.columns:
-                self._type_for(column.data_type, self._TMDL_TYPES, column.name)
-                self._type_for(column.data_type, self._M_TYPES, column.name)
+        table_filenames = {
+            table.name: self._table_filename(table.name) for table in semantic.tables
+        }
 
         self._write_json(
             output_dir / f"{self.project_name}.pbip",
@@ -207,19 +202,11 @@ class PowerBIProvider(BIProvider):
     ) -> bool:
         """Traduce contenido, bindings y un ReportLayout ya calculado a PBIR."""
 
-        if plan.pages and semantic is None:
-            raise ValueError(
-                "semantic es obligatorio para resolver los bindings de un DashboardPlan con paginas"
-            )
-        if plan.pages and report_layout is None:
-            raise ValueError(
-                "report_layout es obligatorio para posicionar un DashboardPlan con paginas"
-            )
-        self._validate_unique_page_names(plan)
-        if report_layout is None:
-            report_layout = ReportLayout()
-        layout_pages = self._associate_layout(plan, report_layout)
-        self._validate_layout(report_layout)
+        layout_pages, report_layout = self.validate_dashboard_project(
+            plan,
+            semantic,
+            report_layout,
+        )
 
         output_dir = Path(output_path)
         report_dir = output_dir / f"{self.project_name}.Report"
@@ -282,6 +269,52 @@ class PowerBIProvider(BIProvider):
         self._remove_stale_directories(pages_dir, expected_page_ids)
 
         return True
+
+    def validate_semantic_project(self, semantic: SemanticProject) -> list[Path]:
+        """Valida fuentes y tipos sin escribir artefactos."""
+
+        if not semantic.tables:
+            raise ValueError("El proyecto semantico debe contener al menos una tabla")
+
+        source_paths: list[Path] = []
+        for table in semantic.tables:
+            self._table_filename(table.name)
+            source_paths.append(self._resolve_csv_source(table))
+            for column in table.columns:
+                self._type_for(column.data_type, self._TMDL_TYPES, column.name)
+                self._type_for(column.data_type, self._M_TYPES, column.name)
+        return source_paths
+
+    def validate_dashboard_project(
+        self,
+        plan: DashboardPlan,
+        semantic: SemanticProject | None,
+        report_layout: ReportLayout | None,
+    ) -> tuple[
+        dict[str, tuple[RenderedPage, dict[str, PlacedVisual]]],
+        ReportLayout,
+    ]:
+        """Valida asociaciones, AABB y bindings antes de escribir PBIR."""
+
+        if plan.pages and semantic is None:
+            raise ValueError(
+                "semantic es obligatorio para resolver los bindings de un DashboardPlan con paginas"
+            )
+        if plan.pages and report_layout is None:
+            raise ValueError(
+                "report_layout es obligatorio para posicionar un DashboardPlan con paginas"
+            )
+        self._validate_unique_page_names(plan)
+        validated_layout = report_layout if report_layout is not None else ReportLayout()
+        layout_pages = self._associate_layout(plan, validated_layout)
+        self._validate_layout(validated_layout)
+
+        if semantic is not None:
+            for page in plan.pages:
+                for instance in page_visual_instances(page):
+                    bindings = self._resolve_visual_bindings(instance.visual, semantic)
+                    self._query_state_for(instance.visual.type, bindings, semantic)
+        return layout_pages, validated_layout
 
     @staticmethod
     def _validate_unique_page_names(plan: DashboardPlan) -> None:

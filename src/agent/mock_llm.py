@@ -27,7 +27,7 @@ class MockLLMProvider(LLMProvider):
         if not state.dataset_profile:
             return Decision(
                 tool_name="profile_dataset",
-                arguments={"file_path": state.input_dataset_path},
+                arguments={"file_path": state.resolve_project_path(state.input_dataset_path)},
                 operational_reason="Se ejecutó el perfilado para identificar tipos de datos, valores faltantes y posibles anomalías."
             )
             
@@ -40,7 +40,11 @@ class MockLLMProvider(LLMProvider):
             ]
             return Decision(
                 tool_name="clean_dataset",
-                arguments={"input_path": state.input_dataset_path, "output_path": "data/processed/ventas_limpio.csv", "actions": actions},
+                arguments={
+                    "input_path": state.resolve_project_path(state.input_dataset_path),
+                    "output_path": state.resolve_project_path("data/processed/ventas_limpio.csv"),
+                    "actions": actions,
+                },
                 operational_reason="Se decidió limpiar nulos de categoría y duplicados basados en el perfilado. No se imputan fechas por seguridad analítica."
             )
             
@@ -102,6 +106,20 @@ class MockLLMProvider(LLMProvider):
             )
             
         # 8. Si todo está perfecto, terminamos
+        if not state.powerbi_export or not state.powerbi_export.success:
+            return Decision(
+                tool_name="export_to_powerbi",
+                arguments={
+                    "semantic_project_json": state.semantic_project.model_dump_json(),
+                    "dashboard_plan_json": state.dashboard_plan.model_dump_json(),
+                    "report_layout_json": state.report_layout.model_dump_json(),
+                    "output_path": state.resolve_project_path(state.powerbi_output_path),
+                    "project_name": state.powerbi_project_name,
+                    "source_base_path": state.resolve_project_path("."),
+                },
+                operational_reason="Exportando los modelos validados a un proyecto PBIP/TMDL/PBIR completo.",
+            )
+
         return Decision(
             tool_name="finish",
             arguments={},

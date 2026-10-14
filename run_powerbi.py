@@ -8,7 +8,7 @@ from src.tools.data.profiler import DataProfiler
 from src.tools.modeling.semantic_builder import SemanticBuilder
 from src.tools.dashboard.planner import DashboardPlanner
 from src.tools.dashboard.generator import ReportGenerator
-from src.tools.bi.powerbi_provider import PowerBIProvider
+from src.tools.bi.export_service import export_to_powerbi
 
 def run():
     print("=== Iniciando FASE 5: Integración con Power BI ===\n")
@@ -28,24 +28,20 @@ def run():
     dashboard_plan = planner.generate_plan()
     report_layout = ReportGenerator(dashboard_plan).generate_layout()
     
-    # Integración PBI
-    print("1. Instanciando Proveedor de BI: Power BI...")
-    pbi = PowerBIProvider(source_base_path=project_root)
-    
-    print("2. Desplegando Modelo Semántico (Generando script TMDL y esqueleto PBIP)...")
-    pbi.deploy_semantic_model(semantic_project, output_dir)
-    print(f"   -> Creado: Estructura PBIP en {output_dir}")
-    
-    print("3. Desplegando contenido, bindings y layout del reporte PBIR...")
-    pbi.deploy_dashboard(
-        dashboard_plan,
-        output_dir,
-        semantic_project,
-        report_layout,
+    print("1. Ejecutando export_to_powerbi con modelos tipados...")
+    result = export_to_powerbi(
+        semantic_project=semantic_project,
+        dashboard_plan=dashboard_plan,
+        report_layout=report_layout,
+        output_path=output_dir,
+        project_name="SIDAD",
+        source_base_path=project_root,
     )
-    print(f"   -> Creado: Estructura Report en {output_dir}")
+    if not result.success:
+        raise RuntimeError(" | ".join(result.errors))
+    print(result.model_dump_json(indent=2))
     
-    print("\nExportación PBIR con layout finalizada. Falta validarla en Power BI Desktop.")
+    print("\nExportación PBIP/TMDL/PBIR mediante la herramienta 12.4 finalizada.")
 
 if __name__ == "__main__":
     run()

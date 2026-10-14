@@ -9,6 +9,7 @@ from src.models.profiling import DiagnosticResult, DatasetProfile
 from src.models.semantic_model import SemanticProject
 from src.models.dashboard import DashboardPlan
 from src.models.report_layout import ReportLayout
+from src.models.powerbi_export import PowerBIExportResult
 from src.agent.validator import ValidationReport
 
 class Orchestrator:
@@ -48,6 +49,12 @@ class Orchestrator:
                 if not state.report_layout:
                     self._record_error(state, "finish", "No se puede finalizar. Falta el Report Layout.", decision.operational_reason)
                     continue
+                if not state.validation_report or not state.validation_report.is_valid:
+                    self._record_error(state, "finish", "No se puede finalizar. El Report Layout no tiene una validacion exitosa.", decision.operational_reason)
+                    continue
+                if not state.powerbi_export or not state.powerbi_export.success:
+                    self._record_error(state, "finish", "No se puede finalizar. Falta una exportacion Power BI exitosa.", decision.operational_reason)
+                    continue
                 if any(v.status == "FAIL" for v in state.critic_verdicts):
                     self._record_error(state, "finish", "No se puede finalizar con errores de Critic pendientes.", decision.operational_reason)
                     continue
@@ -83,10 +90,23 @@ class Orchestrator:
             state.last_tool_result = record.result_summary
 
             # 7. Si fue exitoso, parsear el output hacia el Estado Tipado
-            if not is_error:
+            if decision.tool_name == "export_to_powerbi":
+                self._update_state_from_tool(state, decision.tool_name, result_str)
+            elif not is_error:
                 if decision.tool_name == "clean_dataset":
                     state.processed_dataset_path = decision.arguments.get("output_path")
                 self._update_state_from_tool(state, decision.tool_name, result_str)
+
+            if decision.tool_name == "export_to_powerbi" and is_error:
+                errors = (
+                    state.powerbi_export.errors
+                    if state.powerbi_export is not None
+                    else [result_str]
+                )
+                state.pending_issues.extend(
+                    f"export_to_powerbi: {error}" for error in errors
+                )
+                state.status = "FAILED"
 
             # 8. Fase de Crítica (Self-Correction loop)
             state.critic_verdicts = self.critic.evaluate(state)
@@ -125,12 +145,24 @@ class Orchestrator:
                 state.transformation_logs = [TransformationLog(**l) for l in logs_json] 
             elif tool_name == "build_semantic_model":
                 state.semantic_project = SemanticProject.model_validate_json(result_json)
+                state.dashboard_plan = None
+                state.report_layout = None
+                state.validation_report = None
+                state.powerbi_export = None
             elif tool_name == "create_dashboard_plan":
                 state.dashboard_plan = DashboardPlan.model_validate_json(result_json)
+                state.report_layout = None
+                state.validation_report = None
+                state.powerbi_export = None
             elif tool_name == "generate_layout":
                 state.report_layout = ReportLayout.model_validate_json(result_json)
+                state.validation_report = None
+                state.powerbi_export = None
             elif tool_name == "validate_layout":
                 state.validation_report = ValidationReport.model_validate_json(result_json)
+                state.powerbi_export = None
+            elif tool_name == "export_to_powerbi":
+                state.powerbi_export = PowerBIExportResult.model_validate_json(result_json)
         except Exception as e:
             # Si el JSON no matchea Pydantic, se registra el error
             self._record_error(state, tool_name, f"Fallo parseando salida a Pydantic: {str(e)}", "Internal Parse Error")

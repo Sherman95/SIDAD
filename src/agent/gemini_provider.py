@@ -72,7 +72,7 @@ Si no estás seguro de una transformación peligrosa, utiliza una estrategia seg
 {json.dumps(available_tools, indent=2)}
 
 Además de las listadas, existe una herramienta virtual de control:
-- "finish": Utilízala SOLO cuando la última validación del layout (Critic) haya sido PASS y el reporte esté listo. Si hay errores del Critic pendientes, DEBES ejecutar acciones correctivas antes de finalizar.
+- "finish": Utilízala SOLO cuando la última validación del layout haya sido PASS y `export_to_powerbi` haya terminado con `success=true`. Si hay errores pendientes, DEBES corregirlos antes de finalizar.
 
 --- ESTADO ACTUAL DEL AGENTE ---
 User Request: {state.user_request}
@@ -98,6 +98,9 @@ Artefactos disponibles (Metadatos):
 - Plan Dashboard: {"SÍ" if state.dashboard_plan else "NO"}
 - Layout Reporte: {"SÍ" if state.report_layout else "NO"}
 - Validación Layout: {"SÍ" if state.validation_report else "NO"} (Válido: {state.validation_report.is_valid if state.validation_report else 'N/A'})
+- Exportación Power BI: {"SÍ" if state.powerbi_export else "NO"} (Exitosa: {state.powerbi_export.success if state.powerbi_export else 'N/A'})
+- Directorio de salida Power BI: {state.resolve_project_path(state.powerbi_output_path)}
+- Nombre del proyecto Power BI: {state.powerbi_project_name}
 
 --- CRITIC VERDICTS PENDIENTES (Resultados de validación) ---
 """
@@ -113,6 +116,28 @@ Artefactos disponibles (Metadatos):
         for a in state.execution_history[-5:]:
             status = "ERROR" if a.is_error else "OK"
             prompt += f"Step {a.step} | Tool: {a.tool_name} [{status}] | Result: {a.result_summary}\n"
+
+        if (
+            state.semantic_project
+            and state.dashboard_plan
+            and state.report_layout
+            and state.validation_report
+            and state.validation_report.is_valid
+            and not (state.powerbi_export and state.powerbi_export.success)
+        ):
+            export_arguments = {
+                "semantic_project_json": state.semantic_project.model_dump_json(),
+                "dashboard_plan_json": state.dashboard_plan.model_dump_json(),
+                "report_layout_json": state.report_layout.model_dump_json(),
+                "output_path": state.resolve_project_path(state.powerbi_output_path),
+                "project_name": state.powerbi_project_name,
+                "source_base_path": state.resolve_project_path("."),
+            }
+            prompt += (
+                "\nREGLA OBLIGATORIA: el siguiente paso es export_to_powerbi. "
+                "No uses finish antes de recibir success=true. Usa exactamente "
+                f"estos argumentos: {json.dumps(export_arguments, ensure_ascii=False)}\n"
+            )
 
         prompt += """
 Analiza los datos, elige inteligentemente tu próxima 'tool_name', asigna 'arguments' válidos (un diccionario con los parámetros requeridos), y explica tu 'operational_reason'.

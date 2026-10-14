@@ -1,5 +1,18 @@
 # CONTEXTO INTEGRAL DEL PROYECTO SIDAD (ESTADO ACTUAL)
 
+> **Actualización de Fase 12.4 (2026-10-14):** **FASE 12.4 IMPLEMENTADA Y
+> VALIDADA AUTOMÁTICAMENTE Y VERIFICADA END-TO-END EN POWER BI DESKTOP.**
+> `export_to_powerbi` integra los tres modelos de dominio con
+> `PowerBIProvider`, retorna un resultado tipado, persiste el resultado en
+> `AgentState` y forma parte tanto del `Orchestrator` como de `StaticPipeline`.
+> El agente solo puede finalizar después de una validación AABB exitosa y una
+> exportación PBIP/TMDL/PBIR confirmada. Las rutas se resuelven contra un
+> contexto explícito e independiente del working directory. Power BI Desktop
+> confirmó la apertura de `SIDAD.pbip`, el modelo `FACT_DATA`, dos páginas,
+> doce visuales, datos y medidas reales, bindings, layout e IDs deterministas,
+> sin solapamientos ni overflow visibles. El detalle está en
+> [FASE_12_4_AGENT_EXPORT.md](FASE_12_4_AGENT_EXPORT.md).
+>
 > **Actualización de Fase 12.3 (2026-10-14):** **FASE 12.3 IMPLEMENTADA,
 > VALIDADA ESTRUCTURALMENTE Y VERIFICADA EN POWER BI DESKTOP PARA
 > POSICIONAMIENTO, DIMENSIONES Y DISTRIBUCIÓN DE VISUALES PBIR.**
@@ -33,7 +46,7 @@
 > y los limites de evidencia estan en
 > [FASE_12_1A_TMDL.md](FASE_12_1A_TMDL.md).
 
-Este documento centraliza todo el contexto, arquitectura, evolución y estado actual del proyecto **SIDAD** (Sistema Inteligente para el Diseño Automatizado de Dashboards), actualmente con la Fase 12.3 completada y validada en Power BI Desktop.
+Este documento centraliza todo el contexto, arquitectura, evolución y estado actual del proyecto **SIDAD** (Sistema Inteligente para el Diseño Automatizado de Dashboards), actualmente con la Fase 12.4 implementada, validada automáticamente y verificada end-to-end en Power BI Desktop.
 
 ---
 
@@ -125,14 +138,27 @@ Definidos con Pydantic fuertemente tipados:
 - **Evidencia manual:** Power BI Desktop confirmó canvas `1280 × 720`, cuatro KPI alineados, slicers correctamente distribuidos, gráficos inferiores sin solapamientos y la página `Análisis Detallado` con slicers, pie chart y tabla correctamente distribuidos. Se conservaron páginas, visuales, bindings e IDs, con datos reales y medidas funcionando.
 - **Frontera:** el provider no calcula diseño; styling avanzado, temas, bookmarks, interacciones e integración con el agente permanecen fuera de alcance.
 
+### Fase 12.4: Exportación Power BI integrada en el agente
+- **Estado:** implementada, validada automáticamente y verificada end-to-end en Power BI Desktop.
+- **Qué se implementó:**
+  - Herramienta `export_to_powerbi` registrada y respaldada por un servicio que consume los tres modelos de dominio tipados.
+  - `PowerBIExportResult` con estado, rutas absolutas, artefactos generados, mensaje y errores.
+  - Precondiciones para modelos, fuentes CSV reales, bindings, asociaciones, AABB y salida segura.
+  - Persistencia de la exportación en `AgentState` e invalidación al cambiar artefactos previos.
+  - Guardrail que impide finalizar al agente sin layout validado y exportación exitosa.
+  - Integración en `MockLLMProvider`, prompt Gemini, `Orchestrator`, `StaticPipeline` y `run_powerbi.py`.
+  - Resolución de rutas relativa a un contexto estable, independiente del working directory.
+- **Evidencia automática:** exportación completa por herramienta, flujo mock y pipeline estático, más regresiones de 12.1A–12.3.
+- **Evidencia manual:** Power BI Desktop abrió `SIDAD.pbip`, cargó `FACT_DATA` y mostró las páginas `Resumen Ejecutivo` y `Análisis Detallado` con doce visuales, cuatro KPI, slicers, gráficos y tabla sobre datos reales. Se conservaron bindings, layout e IDs deterministas, sin solapamientos ni overflow visibles. `PowerBIExportResult` quedó persistido en `AgentState` y el agente finalizó después de validar y exportar.
+- **Frontera:** no abre Power BI Desktop y no incorpora styling, temas, bookmarks ni interacciones.
+
 ---
 
 ## 4. ESTADO ACTUAL Y FLUJO DE TRABAJO
 El repositorio se encuentra estable, con pruebas automatizadas (`pytest`) pasando correctamente. El pipeline de evaluación comparativa evidencia que el Agente SIDAD puede auto-corregir errores simulados de validación y finalizar exitosamente los ciclos de las herramientas subyacentes.
 
 ### Comando Principal
-`python run_powerbi.py`: Dispara el workflow estático actual sobre el dataset procesado: perfilado -> modelo semántico -> planificación -> layout -> exportación PBIP/TMDL/PBIR.
+`python run_powerbi.py`: construye los tres modelos sobre el dataset procesado y ejecuta el servicio tipado `export_to_powerbi` para materializar PBIP/TMDL/PBIR.
 
 ### Próximos Pasos de Desarrollo (Roadmap inminente):
-1. **Fase 12.4:** integrar `export_to_powerbi` en `ToolRegistry` y en el flujo del Agente.
-2. **Fase 12.5:** realizar la validación integral de cierre del dashboard completo tras las integraciones posteriores.
+1. **Fase 12.5:** realizar la validación integral y el cierre del dashboard completo.

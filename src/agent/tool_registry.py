@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from typing import Callable, Any
 import traceback
 import json
@@ -39,6 +39,9 @@ class ToolRegistry:
         try:
             # Ejecución real de la herramienta envuelta
             res = func(**kwargs)
+            if isinstance(res, BaseModel):
+                result_json = res.model_dump_json()
+                return not bool(getattr(res, "success", True)), result_json
             return False, res
         except TypeError as e:
             return True, f"Error de Argumentos en tool '{name}': {str(e)}"
@@ -67,6 +70,8 @@ def wrap_clean_dataset(input_path: str, output_path: str, actions: list) -> str:
             df, log = cleaner.fill_nulls(act["column"], act["value"], reason="Imputación automática vía Agente")
             cleaner.df = df
             logs.append(log)
+    from pathlib import Path
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     df.write_csv(output_path)
     return json.dumps([l.model_dump() for l in logs])
 
@@ -98,6 +103,54 @@ def wrap_validate_layout(layout_json: str) -> str:
     # Si detecta colisiones graves, podemos marcar que no es válido
     return val.validate(layout).model_dump_json()
 
+def wrap_export_to_powerbi(
+    semantic_project_json: str | None,
+    dashboard_plan_json: str | None,
+    report_layout_json: str | None,
+    output_path: str,
+    project_name: str = "SIDAD",
+    source_base_path: str | None = None,
+):
+    from src.models.dashboard import DashboardPlan
+    from src.models.powerbi_export import PowerBIExportResult
+    from src.models.report_layout import ReportLayout
+    from src.models.semantic_model import SemanticProject
+    from src.tools.bi.export_service import export_to_powerbi
+
+    payloads = (
+        ("SemanticProject", semantic_project_json, SemanticProject),
+        ("DashboardPlan", dashboard_plan_json, DashboardPlan),
+        ("ReportLayout", report_layout_json, ReportLayout),
+    )
+    parsed: dict[str, BaseModel | None] = {}
+    errors: list[str] = []
+    for label, payload, model_type in payloads:
+        if payload is None:
+            parsed[label] = None
+            errors.append(f"Falta {label}")
+            continue
+        try:
+            parsed[label] = model_type.model_validate_json(payload)
+        except (ValidationError, ValueError, TypeError) as exc:
+            parsed[label] = None
+            errors.append(f"{label} invalido: {exc}")
+
+    if errors:
+        return PowerBIExportResult(
+            success=False,
+            message="No se pudo exportar el proyecto Power BI.",
+            errors=errors,
+        )
+
+    return export_to_powerbi(
+        semantic_project=parsed["SemanticProject"],
+        dashboard_plan=parsed["DashboardPlan"],
+        report_layout=parsed["ReportLayout"],
+        output_path=output_path,
+        project_name=project_name,
+        source_base_path=source_base_path,
+    )
+
 def get_default_registry() -> ToolRegistry:
     reg = ToolRegistry()
     reg.register("profile_dataset", "Analiza la estructura y calidad de un dataset sin modificarlo.", {"file_path": "str"}, wrap_profile_dataset)
@@ -111,4 +164,17 @@ def get_default_registry() -> ToolRegistry:
     reg.register("create_dashboard_plan", "Planifica el reporte analítico.", {"semantic_project_json": "str"}, wrap_create_planner)
     reg.register("generate_layout", "Asigna coordenadas matemáticas.", {"dashboard_plan_json": "str", "columns": "int"}, wrap_generate_layout)
     reg.register("validate_layout", "Verifica colisiones visuales AABB.", {"layout_json": "str"}, wrap_validate_layout)
+    reg.register(
+        "export_to_powerbi",
+        "Exporta SemanticProject, DashboardPlan y ReportLayout validados a PBIP/TMDL/PBIR.",
+        {
+            "semantic_project_json": "str",
+            "dashboard_plan_json": "str",
+            "report_layout_json": "str",
+            "output_path": "str",
+            "project_name": "str",
+            "source_base_path": "str",
+        },
+        wrap_export_to_powerbi,
+    )
     return reg

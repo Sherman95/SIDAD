@@ -56,9 +56,16 @@ def wrap_profile_dataset(file_path: str) -> str:
 
 def wrap_clean_dataset(input_path: str, output_path: str, actions: list) -> str:
     from src.tools.data.cleaner import DataCleaner
-    import polars as pl
+    from src.tools.data.loader import load_tabular_dataset
     import json
-    df = pl.read_csv(input_path)
+    from pathlib import Path
+
+    if Path(output_path).suffix.casefold() != ".csv":
+        raise ValueError(
+            "clean_dataset requiere un output_path CSV para el flujo semantico y Power BI."
+        )
+
+    df = load_tabular_dataset(input_path)
     cleaner = DataCleaner(df)
     logs = []
     for act in actions:
@@ -70,7 +77,6 @@ def wrap_clean_dataset(input_path: str, output_path: str, actions: list) -> str:
             df, log = cleaner.fill_nulls(act["column"], act["value"], reason="Imputación automática vía Agente")
             cleaner.df = df
             logs.append(log)
-    from pathlib import Path
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     df.write_csv(output_path)
     return json.dumps([l.model_dump() for l in logs])

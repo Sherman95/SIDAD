@@ -1,6 +1,7 @@
 import os
 import polars as pl
 from src.models.profiling import ColumnProfile, DatasetProfile, DiagnosticResult
+from src.tools.data.loader import load_tabular_dataset
 
 class DataProfiler:
     """
@@ -15,15 +16,7 @@ class DataProfiler:
 
     def _load_data(self) -> pl.DataFrame:
         """Carga el archivo usando Polars. Soporta CSV y Excel (XLSX)."""
-        ext = os.path.splitext(self.file_path)[1].lower()
-        if ext == '.csv':
-            # ignore_errors permite continuar leyendo si hay problemas de parseo aislados,
-            # pero para mayor robustez inferimos el esquema desde más líneas.
-            return pl.read_csv(self.file_path, infer_schema_length=10000, ignore_errors=True)
-        elif ext in ['.xlsx', '.xls']:
-            return pl.read_excel(self.file_path)
-        else:
-            raise ValueError(f"Formato no soportado: {ext}. Utilice CSV o XLSX.")
+        return load_tabular_dataset(self.file_path)
 
     def profile(self) -> DiagnosticResult:
         """Genera el perfil completo y diagnóstico del dataset."""

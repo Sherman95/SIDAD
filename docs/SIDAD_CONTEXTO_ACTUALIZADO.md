@@ -1,5 +1,17 @@
 # CONTEXTO INTEGRAL DEL PROYECTO SIDAD (ESTADO ACTUAL)
 
+> **Actualización de Fase 12.5 (2026-10-14):** **FASE 12.5 IMPLEMENTADA Y
+> VALIDADA INTEGRALMENTE Y VERIFICADA END-TO-END EN POWER BI DESKTOP.** La
+> cadena técnica principal quedó validada desde el archivo CSV de entrada hasta
+> Power BI Desktop: perfilado, limpieza, modelo semántico, plan, layout,
+> validación AABB y exportación PBIP/TMDL/PBIR. Desktop confirmó `FACT_DATA`,
+> siete registros, tipos y clave, cuatro medidas, dos páginas, doce visuales,
+> bindings, layout, interacciones y filtrado correcto por producto. CSV queda
+> validado automática y manualmente; XLSX queda validado end-to-end
+> automáticamente, sin atribuirle una apertura específica en Desktop. El
+> detalle está en
+> [FASE_12_5_VALIDACION_INTEGRAL.md](FASE_12_5_VALIDACION_INTEGRAL.md).
+>
 > **Actualización de Fase 12.4 (2026-10-14):** **FASE 12.4 IMPLEMENTADA Y
 > VALIDADA AUTOMÁTICAMENTE Y VERIFICADA END-TO-END EN POWER BI DESKTOP.**
 > `export_to_powerbi` integra los tres modelos de dominio con
@@ -46,7 +58,7 @@
 > y los limites de evidencia estan en
 > [FASE_12_1A_TMDL.md](FASE_12_1A_TMDL.md).
 
-Este documento centraliza todo el contexto, arquitectura, evolución y estado actual del proyecto **SIDAD** (Sistema Inteligente para el Diseño Automatizado de Dashboards), actualmente con la Fase 12.4 implementada, validada automáticamente y verificada end-to-end en Power BI Desktop.
+Este documento centraliza todo el contexto, arquitectura, evolución y estado actual del proyecto **SIDAD** (Sistema Inteligente para el Diseño Automatizado de Dashboards), actualmente con la Fase 12.5 completada, validada integralmente y verificada end-to-end en Power BI Desktop.
 
 ---
 
@@ -85,7 +97,7 @@ Definidos con Pydantic fuertemente tipados:
 ## 3. HISTORIAL DE FASES IMPLEMENTADAS
 
 ### Fases 1 a 4: Preparación y Modelado
-- **Fase 1 (Perfilado):** Ingesta de CSV usando Polars y generación de perfiles estadísticos (`DataProfiler`).
+- **Fase 1 (Perfilado):** Ingesta de CSV y XLSX usando Polars y generación de perfiles estadísticos (`DataProfiler`).
 - **Fase 2 (Limpieza):** Generación de operaciones correctivas (`DataCleaner`) con registro de transformaciones.
 - **Fase 3 (Modelado Semántico):** Análisis del esquema en estrella (Dimensiones/Hechos) a partir de los perfiles y definición de KPIs.
 - **Fase 4 (Planificación de Dashboard):** Creación del `DashboardPlan` mapeando los requerimientos de negocio a páginas y visuales abstractos.
@@ -152,13 +164,30 @@ Definidos con Pydantic fuertemente tipados:
 - **Evidencia manual:** Power BI Desktop abrió `SIDAD.pbip`, cargó `FACT_DATA` y mostró las páginas `Resumen Ejecutivo` y `Análisis Detallado` con doce visuales, cuatro KPI, slicers, gráficos y tabla sobre datos reales. Se conservaron bindings, layout e IDs deterministas, sin solapamientos ni overflow visibles. `PowerBIExportResult` quedó persistido en `AgentState` y el agente finalizó después de validar y exportar.
 - **Frontera:** no abre Power BI Desktop y no incorpora styling, temas, bookmarks ni interacciones.
 
+### Fase 12.5: Validación integral y compatibilidad de entrada
+- **Estado:** implementada, validada integralmente y verificada end-to-end en Power BI Desktop.
+- **Qué se validó:**
+  - Flujo completo desde fuentes CSV y XLSX hasta `PowerBIExportResult` persistido en `AgentState`.
+  - Cargador común para perfilado y limpieza, con XLSX leído mediante `openpyxl` y normalizado a CSV procesado.
+  - Modelo semántico, KPI, dos páginas, doce visuales, layout `1280 x 720` y validación AABB sin errores.
+  - PBIP, TMDL y PBIR completos, con rutas estables e IDs deterministas iguales entre entradas equivalentes CSV/XLSX.
+  - Rechazo explícito de archivos inexistentes, datasets vacíos, JSON, Parquet y XLS heredado.
+  - Preservación no destructiva de las fuentes en `data/raw`.
+- **Evidencia automática:** `9 passed` en 12.5 y `55 passed, 1 skipped, 1 deselected` en la suite relevante completa.
+- **Evidencia manual:** el proyecto generado desde el flujo CSV abrió correctamente en Power BI Desktop. Se confirmaron `FACT_DATA`, siete registros, tipos coherentes, `id_venta` como clave, las cuatro medidas, dos páginas, doce visuales, bindings y layout sin solapamientos ni overflow. Los slicers interactuaron correctamente; al filtrar `Monitor`, los KPI mostraron 1 registro, cantidad 1,00, precio total 300,00 y promedio 300,00.
+- **Compatibilidad:** CSV está validado end-to-end también en Power BI Desktop. XLSX está validado end-to-end automáticamente, pero no fue abierto específicamente en Desktop. JSON, Parquet y XLS heredado no están soportados.
+- **Limitaciones:** XLSX se normaliza a CSV procesado; Power BI continúa usando particiones CSV; no existe selección de múltiples hojas ni rangos Excel.
+
 ---
 
 ## 4. ESTADO ACTUAL Y FLUJO DE TRABAJO
-El repositorio se encuentra estable, con pruebas automatizadas (`pytest`) pasando correctamente. El pipeline de evaluación comparativa evidencia que el Agente SIDAD puede auto-corregir errores simulados de validación y finalizar exitosamente los ciclos de las herramientas subyacentes.
+El repositorio se encuentra estable con la Fase 12.5 completada. La cadena técnica principal está validada desde el archivo CSV de entrada hasta Power BI Desktop. XLSX completó el mismo recorrido end-to-end automáticamente mediante normalización a CSV procesado. El pipeline conserva la fuente raw, valida el layout y solo finaliza después de una exportación Power BI exitosa.
 
 ### Comando Principal
 `python run_powerbi.py`: construye los tres modelos sobre el dataset procesado y ejecuta el servicio tipado `export_to_powerbi` para materializar PBIP/TMDL/PBIR.
 
 ### Próximos Pasos de Desarrollo (Roadmap inminente):
-1. **Fase 12.5:** realizar la validación integral y el cierre del dashboard completo.
+1. **Cierre documental:** consolidar la memoria técnica, evidencias y anexos de las fases completadas.
+2. **Evaluación académica final:** preparar resultados, discusión, conclusiones y defensa de la tesis.
+3. **Mejora visual/UX opcional:** refinar styling y experiencia de uso sin alterar el núcleo validado.
+4. **Experimentación adicional:** ampliar escenarios o métricas únicamente si la tesis lo requiere.

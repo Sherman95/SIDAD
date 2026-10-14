@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
-from src.models.semantic_model import SemanticProject
+
 from src.models.dashboard import DashboardPlan
+from src.models.report_layout import ReportLayout
+from src.models.semantic_model import SemanticProject
+
 
 class BIProvider(ABC):
     """
@@ -14,6 +17,12 @@ class BIProvider(ABC):
         pass
 
     @abstractmethod
-    def deploy_dashboard(self, plan: DashboardPlan, output_path: str) -> bool:
+    def deploy_dashboard(
+        self,
+        plan: DashboardPlan,
+        output_path: str,
+        semantic: SemanticProject | None = None,
+        report_layout: ReportLayout | None = None,
+    ) -> bool:
         """Exporta o despliega la configuración visual al formato del proveedor."""
         pass

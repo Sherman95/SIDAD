@@ -1,5 +1,13 @@
 from src.models.semantic_model import SemanticProject, ColumnRole
-from src.models.dashboard import DashboardPlan, DashboardPage, VisualElement, VisualType
+from src.models.dashboard import (
+    DashboardPage,
+    DashboardPlan,
+    SemanticFieldKind,
+    SemanticFieldRef,
+    VisualBindings,
+    VisualElement,
+    VisualType,
+)
 
 class DashboardPlanner:
     """
@@ -67,6 +75,11 @@ class DashboardPlanner:
         
         # --- PÁGINA 2: Detalles (Solo si hay múltiples dimensiones) ---
         if len(dimensions) > 1:
+            detail_table = next(
+                table
+                for table in self.semantic.tables
+                if any(column is dimensions[1] for column in table.columns)
+            )
             detail_page = DashboardPage(
                 name="Análisis Detallado",
                 objective="Exploración en profundidad de dimensiones secundarias"
@@ -83,6 +96,16 @@ class DashboardPlanner:
             detail_page.visuals.append(VisualElement(
                 title="Tabla de Registros",
                 type=VisualType.TABLE,
+                bindings=VisualBindings(
+                    values=[
+                        SemanticFieldRef(
+                            table=detail_table.name,
+                            field=column.name,
+                            kind=SemanticFieldKind.COLUMN,
+                        )
+                        for column in detail_table.columns
+                    ]
+                ),
                 description="Vista granular para exportación o auditoría detallada"
             ))
             

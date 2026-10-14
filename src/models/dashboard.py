@@ -1,6 +1,47 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from enum import Enum
 from typing import Optional
+
+
+class SemanticFieldKind(str, Enum):
+    """Clase portable de campo expuesto por un modelo semantico."""
+
+    COLUMN = "Column"
+    MEASURE = "Measure"
+
+
+class SemanticAggregation(str, Enum):
+    """Agregaciones portables que un adaptador de BI puede traducir."""
+
+    SUM = "Sum"
+    AVERAGE = "Average"
+    DISTINCT_COUNT = "DistinctCount"
+    MIN = "Min"
+    MAX = "Max"
+    COUNT = "Count"
+
+
+class SemanticFieldRef(BaseModel):
+    """Referencia inequivoca a una columna o medida, sin detalles de PBIR."""
+
+    table: str = Field(min_length=1)
+    field: str = Field(min_length=1)
+    kind: SemanticFieldKind
+    aggregation: Optional[SemanticAggregation] = None
+
+    @model_validator(mode="after")
+    def validate_aggregation(self) -> "SemanticFieldRef":
+        if self.kind == SemanticFieldKind.MEASURE and self.aggregation is not None:
+            raise ValueError("Una medida no admite una segunda agregacion")
+        return self
+
+
+class VisualBindings(BaseModel):
+    """Roles analiticos portables de un visual, independientes del proveedor."""
+
+    category: Optional[SemanticFieldRef] = None
+    values: list[SemanticFieldRef] = Field(default_factory=list)
+    series: Optional[SemanticFieldRef] = None
 
 class VisualType(str, Enum):
     CARD = "Card"                 # Para mostrar un KPI único
@@ -15,6 +56,10 @@ class VisualElement(BaseModel):
     title: str = Field(description="Título visible del gráfico")
     type: VisualType = Field(description="Tipo de gráfico recomendado")
     kpi_ref: Optional[str] = Field(default=None, description="Nombre del KPI asociado, si aplica")
+    bindings: Optional[VisualBindings] = Field(
+        default=None,
+        description="Referencias semanticas inequivocas; conserva compatibilidad con los ejes existentes",
+    )
     x_axis: Optional[str] = Field(default=None, description="Dimensión en el eje X")
     y_axis: Optional[str] = Field(default=None, description="Métrica en el eje Y")
     description: str = Field(default="", description="Justificación técnica/de negocio para usar este visual")

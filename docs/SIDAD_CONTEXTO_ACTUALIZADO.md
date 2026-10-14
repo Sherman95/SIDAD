@@ -1,5 +1,27 @@
 # CONTEXTO INTEGRAL DEL PROYECTO SIDAD (ESTADO ACTUAL)
 
+> **Actualización de Fase 12.3 (2026-10-14):** **FASE 12.3 IMPLEMENTADA,
+> VALIDADA ESTRUCTURALMENTE Y VERIFICADA EN POWER BI DESKTOP PARA
+> POSICIONAMIENTO, DIMENSIONES Y DISTRIBUCIÓN DE VISUALES PBIR.**
+> `ReportLayout` se integra con PBIR mediante referencias deterministas; el
+> exportador traduce `x`, `y`, `width`, `height`, `z` y `tabOrder` sin decidir
+> el diseño. El layout base `1280 x 720` supera la validación AABB sin overflow,
+> solapamientos ni advertencias. Power BI Desktop confirmó el canvas, la
+> distribución de KPI, slicers, gráficos y tabla, la ausencia de superposiciones
+> y la conservación de páginas, visuales, bindings e IDs con datos reales. El detalle está en
+> [FASE_12_3_LAYOUT_PBIR.md](FASE_12_3_LAYOUT_PBIR.md).
+>
+> **Actualización de Fase 12.2 (2026-10-14):** **FASE 12.2 IMPLEMENTADA,
+> VALIDADA ESTRUCTURALMENTE Y VERIFICADA EN POWER BI DESKTOP PARA GENERACIÓN DE
+> PÁGINAS, VISUALES Y BINDINGS PBIR.** El
+> exportador genera la estructura PBIR modular, paginas y visuales con IDs
+> deterministas, bindings contra `SemanticProject`, resolucion explicita de
+> ambiguedades y limpieza stale. Power BI Desktop confirmó 2 páginas, 12
+> visuales, todos los tipos previstos, bindings con columnas y medidas reales,
+> carga de datos y funcionamiento de los visuales. La superposición observada
+> correspondía al placeholder que 12.3 ya sustituyó. El detalle se documenta en
+> [FASE_12_2_PBIR.md](FASE_12_2_PBIR.md).
+>
 > **Actualizacion de Fase 12.1A (2026-09-29):** **FASE 12.1A IMPLEMENTADA,
 > VALIDADA ESTRUCTURALMENTE Y VERIFICADA EN POWER BI DESKTOP PARA CARGA Y
 > ACTUALIZACIÓN DEL MODELO SEMÁNTICO.** Se incorporaron tipos semanticos
@@ -11,7 +33,7 @@
 > y los limites de evidencia estan en
 > [FASE_12_1A_TMDL.md](FASE_12_1A_TMDL.md).
 
-Este documento centraliza todo el contexto, arquitectura, evolución y estado actual del proyecto **SIDAD** (Sistema Inteligente para el Diseño Automatizado de Dashboards), reflejando desde los requerimientos iniciales hasta la implementación de la Fase 12.1.
+Este documento centraliza todo el contexto, arquitectura, evolución y estado actual del proyecto **SIDAD** (Sistema Inteligente para el Diseño Automatizado de Dashboards), actualmente con la Fase 12.3 completada y validada en Power BI Desktop.
 
 ---
 
@@ -77,16 +99,40 @@ Definidos con Pydantic fuertemente tipados:
 - **Evidencia manual:** `SIDAD.pbip` abrió correctamente; `FACT_DATA`, columnas, tipos y medidas fueron reconocidos; la partición M leyó el CSV procesado real y la actualización terminó sin errores.
 - **Límite:** esta evidencia corresponde al modelo semántico. No existe todavía un dashboard PBIR completo.
 
+### Fase 12.2: Contenido y bindings Power BI (PBIR)
+- **Estado:** implementada, validada estructuralmente y verificada en Power BI Desktop para generación de páginas, visuales y bindings PBIR.
+- **Qué se implementó:**
+  - Estructura modular `definition/version.json`, `report.json`, `pages/pages.json`, `page.json` y `visual.json`.
+  - IDs deterministas, orden y página activa.
+  - Traducción de Card, BarChart, LineChart, Table, PieChart y Slicer a tipos PBIR oficiales.
+  - Bindings a columnas, medidas y agregaciones resueltos contra `SemanticProject`, con error explícito ante ambigüedad.
+  - Tablas con múltiples referencias de campo y slicers declarados por página.
+  - Limpieza de páginas, visuales y archivos legacy obsoletos.
+  - Validación automatizada contra los schemas oficiales publicados de Microsoft.
+- **Evidencia manual:** 2 páginas y 12 visuales cargaron correctamente; cards, slicers, line chart, clustered bar chart, pie chart y `tableEx` funcionaron con columnas, medidas y datos reales.
+- **Frontera:** no consume `ReportLayout`, no calcula layout final y no registra `export_to_powerbi` en el agente. Las posiciones son placeholders técnicos sin `z` ni `tabOrder`.
+
+### Fase 12.3: Layout real en Power BI (PBIR)
+- **Estado:** implementada, validada estructuralmente y verificada en Power BI Desktop para posicionamiento, dimensiones y distribución de visuales PBIR.
+- **Qué se implementó:**
+  - Referencia `visual_ref` determinista entre `DashboardPlan` y cada `PlacedVisual`.
+  - Layout reproducible para canvas `1280 x 720`, con zonas y mínimos por tipo de visual.
+  - Inclusión de slicers declarados en el layout físico.
+  - Traducción de `x`, `y`, `width`, `height`, `z` y `tabOrder` a `visual.json`.
+  - Uso de `RenderedPage` para el tamaño real de `page.json`.
+  - Fallo explícito ante asociaciones ausentes, adicionales, inconsistentes o ambiguas.
+  - Validación AABB previa a la escritura para impedir overflow y solapamientos.
+- **Evidencia manual:** Power BI Desktop confirmó canvas `1280 × 720`, cuatro KPI alineados, slicers correctamente distribuidos, gráficos inferiores sin solapamientos y la página `Análisis Detallado` con slicers, pie chart y tabla correctamente distribuidos. Se conservaron páginas, visuales, bindings e IDs, con datos reales y medidas funcionando.
+- **Frontera:** el provider no calcula diseño; styling avanzado, temas, bookmarks, interacciones e integración con el agente permanecen fuera de alcance.
+
 ---
 
 ## 4. ESTADO ACTUAL Y FLUJO DE TRABAJO
 El repositorio se encuentra estable, con pruebas automatizadas (`pytest`) pasando correctamente. El pipeline de evaluación comparativa evidencia que el Agente SIDAD puede auto-corregir errores simulados de validación y finalizar exitosamente los ciclos de las herramientas subyacentes.
 
 ### Comando Principal
-`python run_powerbi.py`: Dispara el workflow estático actual sobre el dataset procesado: perfilado -> modelo semántico -> planificación -> exportación estructural PBIP/TMDL.
+`python run_powerbi.py`: Dispara el workflow estático actual sobre el dataset procesado: perfilado -> modelo semántico -> planificación -> layout -> exportación PBIP/TMDL/PBIR.
 
 ### Próximos Pasos de Desarrollo (Roadmap inminente):
-1. **Fase 12.2:** implementar la estructura PBIR completa: `report.json`, `version.json`, `pages/`, visuales y bindings visuales.
-2. **Fase 12.3:** traducir `ReportLayout -> PBIR`, incluyendo canvas, posiciones, tamaños y orden visual.
-3. **Fase 12.4:** integrar `export_to_powerbi` en `ToolRegistry` y en el flujo del Agente.
-4. **Fase 12.5:** validar manualmente en Power BI Desktop el dashboard completo, incluyendo páginas, visuales, bindings y layout.
+1. **Fase 12.4:** integrar `export_to_powerbi` en `ToolRegistry` y en el flujo del Agente.
+2. **Fase 12.5:** realizar la validación integral de cierre del dashboard completo tras las integraciones posteriores.
